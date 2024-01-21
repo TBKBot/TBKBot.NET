@@ -10,7 +10,7 @@ namespace TBKBot.other
 {
     internal class Logging
     {
-        public static ulong logChannel = 1194270705748033566;
+        public static ulong logChannel = 737683342371061850;
         public async Task LogDeletion(DiscordMessage msg)
         {
             DiscordEmbedBuilder builder = new DiscordEmbedBuilder();

@@ -46,7 +46,7 @@ namespace TBKBot
 
             Client.MessageCreated += async (s, e) =>
             {
-                if (!e.Message.Author.IsBot && e.Message.Content.ToLower().Contains("balls"))
+                if (e.Message.Author != Client.CurrentUser && e.Message.Content.ToLower().Contains("balls"))
                     await e.Message.RespondAsync("balls");
             };
 
@@ -61,12 +61,13 @@ namespace TBKBot
             
             Client.MessageUpdated += async (s, e) =>
             {
-                if (e.Message.Author.IsBot)
+                if (!e.Message.Author.IsBot)
                 {
-                    return; // returns function if a bot edited their own message
+                    if (e.MessageBefore.Content != e.Message.Content)
+                    {
+                        await logger.LogEdit(e.MessageBefore, e.Message);
+                    }
                 }
-
-                await logger.LogEdit(e.MessageBefore, e.Message);
             };
 
             Client.MessageReactionAdded += async (s, e) =>

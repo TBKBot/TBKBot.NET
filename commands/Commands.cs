@@ -10,6 +10,12 @@ using System.ComponentModel;
 using System.Linq;
 using System.Reflection.Emit;
 using System.Threading.Tasks;
+using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
+using System.Net.Http;
+using System.Collections.Generic;
+using Tenor;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace TBKBot.commands
 {
@@ -70,27 +76,68 @@ namespace TBKBot.commands
             }
         }
 
-        [Command("access")]
-        public async Task GiveAccess(CommandContext ctx, DiscordMember member)
+        [Command("sayrandom")]
+        [Aliases("sayrand")]
+        public async Task SayRandom(CommandContext ctx, [RemainingText] string prompt)
         {
-            var role = ctx.Guild.GetRole(1193485223128727552);
+            if (prompt == null)
+            {
+                var embedBuilder = new DiscordEmbedBuilder
+                {
+                    Title = "Formatting guide",
+                    Description = "`{num1-num2}`: Gives a random number in the range\n`{choice1 | choice2 | choice3}`: Gives a random following choice"
+                };
 
-            await member.GrantRoleAsync(role);
+                var embed = embedBuilder.Build();
 
-            await ctx.Channel.SendMessageAsync($"> Added {member.Mention} to this category.");
+                await ctx.RespondAsync(embed: embed);
+
+                return;
+            }
+
+            prompt = GenerateResult(prompt);
+
+            var messageBuilder = new DiscordMessageBuilder().WithContent(prompt);
+
+            await ctx.RespondAsync(messageBuilder);
         }
 
-        [Command("rng")]
-        public async Task Rng(CommandContext ctx)
+        private string GenerateResult(string prompt)
         {
-            ulong id = ctx.User.Id;
+            Regex regex = new Regex(@"\{(.*?)\}");
+            MatchCollection matches = regex.Matches(prompt);
 
-            int seed1 = (int)(id & uint.MaxValue);
-            int seed2 = (int)(id >> 32);
+            Random random = new Random();
 
-            Random rng = new Random(seed1 ^ seed2);
+            foreach (Match match in matches)
+            {
+                string[] options = match.Groups[1].Value.Split('|');
 
-            await ctx.RespondAsync($"{rng.Next(0, 100)}%");
+                // Check if the option is a random number range {num1-num2}
+                if (options.Length == 1 && options[0].Contains("-"))
+                {
+                    string[] range = options[0].Split('-');
+                    int min = int.Parse(range[0].Trim());
+                    int max = int.Parse(range[1].Trim());
+                    int randomNumber = random.Next(min, max + 1);
+
+                    prompt = prompt.Replace(match.Value, randomNumber.ToString());
+                }
+                else
+                {
+                    string selectedOption = options[random.Next(options.Length)].Trim();
+
+                    if (selectedOption.Contains("{"))
+                    {
+                        // If the selected option contains nested options, recursively generate the result
+                        selectedOption = GenerateResult(selectedOption);
+                    }
+
+                    prompt = prompt.Replace(match.Value, selectedOption);
+                }
+            }
+
+            return prompt;
         }
 
         [Command("snipe")]
@@ -173,6 +220,78 @@ namespace TBKBot.commands
             var rng = new Random().Next(2, sides);
 
             await msg.ModifyAsync(msg.Content + $"\n\nIt landed on **{rng}** !");
+        }
+
+        [Command("melt")]
+        public async Task Melt(CommandContext ctx)
+        {
+            const string chars = "abcdefghijklmnopqrstuvwxyz";
+
+            Random random = new Random();
+
+            int length = random.Next(4, 20);
+
+            var output = new string(Enumerable.Repeat(chars, length)
+                .Select(s => s[random.Next(s.Length)]).ToArray());
+
+            await ctx.RespondAsync(output);
+        }
+
+        [Command("hug")]
+        public async Task Hug(CommandContext ctx, DiscordMember member)
+        {
+            string[] gifs = { "https://media1.tenor.com/m/kCZjTqCKiggAAAAd/hug.gif", "https://media1.tenor.com/m/TsEh_PJhTKwAAAAd/pjsk-pjsk-anime.gif", "https://media1.tenor.com/m/uiak6BECN_sAAAAd/emunene-emu.gif",
+            "https://media1.tenor.com/m/9e1aE_xBLCsAAAAd/anime-hug.gif", "https://media1.tenor.com/m/FyR2BudmUGAAAAAd/kumirei.gif" };
+
+            int index = new Random().Next(gifs.Length);
+
+            DiscordEmbedBuilder embedBuilder = new DiscordEmbedBuilder
+            {
+                Title = $"{ctx.Member.DisplayName} hugs {member.DisplayName}",
+                ImageUrl = gifs[index]
+            };
+
+            var embed = embedBuilder.Build();
+
+            await ctx.RespondAsync(embed);
+        }
+
+        [Command("pat")]
+        public async Task Pat(CommandContext ctx, DiscordMember member)
+        {
+            string[] gifs = { "https://media1.tenor.com/m/E6fMkQRZBdIAAAAd/kanna-kamui-pat.gif", "https://media1.tenor.com/m/7xrOS-GaGAIAAAACd/anime-pat-anime.gif", "https://media1.tenor.com/m/OGnRVWCps7IAAAAd/anime-head-pat.gif",
+            "https://media1.tenor.com/m/YMRmKEdwZCgAAAAd/anime-hug-anime.gif", "https://media1.tenor.com/m/xvwMZvxTQAQAAAAd/pat.gif" };
+
+            int index = new Random().Next(gifs.Length);
+
+            DiscordEmbedBuilder embedBuilder = new DiscordEmbedBuilder
+            {
+                Title = $"{ctx.Member.DisplayName} pats {member.DisplayName}",
+                ImageUrl = gifs[index]
+            };
+
+            var embed = embedBuilder.Build();
+
+            await ctx.RespondAsync(embed);
+        }
+
+        [Command("coin")]
+        public async Task Coin(CommandContext ctx)
+        {
+            var message = await ctx.RespondAsync("Throwing coin...");
+
+            Random rnd = new Random();
+
+            var index = rnd.Next(0, 1);
+
+            if (index == 0 )
+            {
+                await message.ModifyAsync("The coin landed on **heads**!");
+            }
+            else if (index == 1)
+            {
+                await message.ModifyAsync("The coin landed on **tails**!");
+            }
         }
     }
 }
