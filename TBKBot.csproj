@@ -9,8 +9,11 @@
 
   <ItemGroup>
     <Compile Remove="bin\**" />
+    <Compile Remove="Media\**" />
     <EmbeddedResource Remove="bin\**" />
+    <EmbeddedResource Remove="Media\**" />
     <None Remove="bin\**" />
+    <None Remove="Media\**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -29,10 +32,6 @@
     <PackageReference Include="MongoDB.Driver.Core" Version="2.24.0" />
     <PackageReference Include="Npgsql" Version="8.0.2" />
     <PackageReference Include="TimeZoneConverter" Version="6.1.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Media\" />
   </ItemGroup>
 
 </Project>
