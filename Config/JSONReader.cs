@@ -6,8 +6,9 @@ namespace TBKBot
 {
     internal class JSONReader
     {
-        public string token { get; set; }
-        public string prefix { get; set; }
+        public string Token { get; set; }
+        public string Prefix { get; set; }
+        public ulong? WelcomeChannel {  get; set; }
         public async Task ReadJSON()
         {
             using (StreamReader sr = new StreamReader("config.json"))
@@ -15,15 +16,17 @@ namespace TBKBot
                 string json = await sr.ReadToEndAsync();
                 JSONStructure data = JsonConvert.DeserializeObject<JSONStructure>(json);
 
-                this.token = data.token;
-                this.prefix = data.prefix;
+                this.Token = data.Token;
+                this.Prefix = data.Prefix;
+                this.WelcomeChannel = data.WelcomeChannel;
             }
         }
     }
 
     internal sealed class JSONStructure
     {
-        public string token { get; set; }
-        public string prefix { get; set; }
+        public string Token { get; set; }
+        public string Prefix { get; set; }
+        public ulong? WelcomeChannel { get; set; }
     }
 }
