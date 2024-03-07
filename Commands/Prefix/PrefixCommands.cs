@@ -6,7 +6,6 @@ using DSharpPlus.Interactivity.Extensions;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using TBKBot.Data;
-using TBKBot.Models;
 
 namespace TBKBot.commands
 {
@@ -39,7 +38,7 @@ namespace TBKBot.commands
                 return;
             }
 
-            if (member.Roles.Contains(role)) 
+            if (member.Roles.Contains(role))
             {
                 await member.RevokeRoleAsync(role);
                 await ctx.RespondAsync("Role revoked.");
@@ -56,7 +55,7 @@ namespace TBKBot.commands
         {
             Random rnd = new Random();
 
-            var randomNumber = rnd.Next(1,10);
+            var randomNumber = rnd.Next(1, 10);
 
             await ctx.RespondAsync("Pick a number from 1 to 10");
 
@@ -158,7 +157,7 @@ namespace TBKBot.commands
 
             await ctx.RespondAsync(embed);
         }
-        
+
         [Command("snipeedit")]
         public async Task SnipeEdit(CommandContext ctx) // snipeedit needs to be reworked
         {
@@ -579,7 +578,7 @@ namespace TBKBot.commands
             await ctx.RespondAsync(embed);
         }
 
-        
+
         [Command("balance")]
         [Aliases("bal")]
         public async Task Balance(CommandContext ctx, DiscordMember member = null)
@@ -601,7 +600,7 @@ namespace TBKBot.commands
             await ctx.RespondAsync($"{member.Username}'s balance: ${data.Money.ToString("N0")}");
         }
 
-        
+
         [Command("donate")]
         public async Task DonateToBot(CommandContext ctx, int amount = 0)
         {
@@ -628,7 +627,7 @@ namespace TBKBot.commands
         }
 
 
-        
+
         [Command("leaderboard")]
         [Aliases("lb")]
         public async Task MoneyLeaderboard(CommandContext ctx)
@@ -728,6 +727,8 @@ namespace TBKBot.commands
             await ctx.RespondAsync($"{randomUser.Mention}");
         }
 
+        private Dictionary<ulong, string> cachedMessages = new Dictionary<ulong, string>();
+
         [Command("string")]
         public async Task RandomString(CommandContext ctx, DiscordChannel channel = null)
         {
@@ -740,9 +741,22 @@ namespace TBKBot.commands
 
             var message = await ctx.RespondAsync("Generating...");
 
-            var messages = await channel.GetMessagesAsync(1000);
+            string messageContents = "";
 
-            string allMessagesContent = string.Join("\n", messages.Select(msg => msg.Content));
+            if (cachedMessages.ContainsKey(channel.Id))
+            {
+                messageContents = cachedMessages[channel.Id];
+            }
+            else
+            {
+                var retrievedMessages = await channel.GetMessagesAsync(1000);
+
+                string allMessagesContent = string.Join("\n", retrievedMessages.Select(msg => msg.Content));
+
+                cachedMessages[channel.Id] = allMessagesContent;
+
+                messageContents = allMessagesContent;
+            }
 
             int limit = random.Next(1, 20);
 
@@ -750,10 +764,10 @@ namespace TBKBot.commands
             string pattern = @"(?:https?|ftp):\/\/[\n\S]+";
 
             // Remove URLs from the concatenated string
-            allMessagesContent = Regex.Replace(allMessagesContent, pattern, "");
+            messageContents = Regex.Replace(messageContents, pattern, "");
 
             // Split the concatenated string into words
-            var words = allMessagesContent.Split(new[] { ' ', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+            var words = messageContents.Split(new[] { ' ', '\n' }, StringSplitOptions.RemoveEmptyEntries);
 
             // Shuffle the words to get a random order
             words = words.OrderBy(_ => random.Next()).ToArray();
