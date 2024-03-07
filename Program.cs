@@ -29,7 +29,7 @@ namespace TBKBot
             var discordConfig = new DiscordConfiguration()
             {
                 Intents = DiscordIntents.All,
-                Token = jsonReader.token,
+                Token = jsonReader.Token,
                 TokenType = TokenType.Bot,
                 AutoReconnect = true,
                 MinimumLogLevel = LogLevel.Debug
@@ -51,13 +51,14 @@ namespace TBKBot
             _messageDeletionHandler = new MessageDeletionHandler(Client);
             var memberJoinHandler = new MemberJoinHandler(Client);
             var memberLeaveHandler = new MemberLeaveHandler(Client);
+            var reactAddHandler = new ReactionAddHandler(Client);
             var componentInteractHandler = new ComponentInteractionHandler(Client);
 
 
             //Setting up command configuration
             var commandsConfig = new CommandsNextConfiguration()
             {
-                StringPrefixes = new string[] { jsonReader.prefix },
+                StringPrefixes = new string[] { jsonReader.Prefix },
                 EnableMentionPrefix = true,
                 EnableDms = true,
                 EnableDefaultHelp = false

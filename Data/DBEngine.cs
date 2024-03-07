@@ -16,6 +16,7 @@ namespace TBKBot.Data
             Database = Client.GetDatabase(databaseName);
         }
 
+        //member data
         public async Task SaveMemberAsync(GuildMember member)
         {
             var col = Database.GetCollection<GuildMember>("members");
@@ -46,6 +47,7 @@ namespace TBKBot.Data
             return members;
         }
 
+        //mimic data
         public async Task SaveMimicMessageAsync(MimicMessage message)
         {
             var col = Database.GetCollection<MimicMessage>("mimics");
@@ -58,6 +60,25 @@ namespace TBKBot.Data
         public async Task<MimicMessage> FindMimicMessageAsync(ulong id)
         {
             var col = Database.GetCollection<MimicMessage>("mimics");
+
+            var message = await col.Find(x => x.Id == id).SingleOrDefaultAsync();
+
+            return message;
+        }
+
+        //starboard data
+        public async Task SaveStarMessageAsync(StarMessage message)
+        {
+            var col = Database.GetCollection<StarMessage>("starboard");
+
+            var filter = Builders<StarMessage>.Filter.Eq(x => x.Id, message.Id);
+
+            await col.ReplaceOneAsync(filter, message, new ReplaceOptions { IsUpsert = true });
+        }
+
+        public async Task<StarMessage> LoadStarMessageAsync(ulong id)
+        {
+            var col = Database.GetCollection<StarMessage>("starboard");
 
             var message = await col.Find(x => x.Id == id).SingleOrDefaultAsync();
 

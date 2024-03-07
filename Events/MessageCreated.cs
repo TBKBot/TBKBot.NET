@@ -2,6 +2,7 @@
 using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
 using LiteDB;
+using System.Text.RegularExpressions;
 using TBKBot;
 using TBKBot.Data;
 using TBKBot.Models;
@@ -23,6 +24,7 @@ public class MessageCreationHandler
         {
             return;
         }
+
 
         // get suggestions
         if (e.Channel.Id == 704969433092849665 || e.Channel.Id == 745094818547630080)
@@ -62,16 +64,32 @@ public class MessageCreationHandler
         // balls
         if (e.Message.Content.ToLower().Contains("balls"))
         {
-            var msg = await e.Message.RespondAsync("balls");
+            string pattern = @"(balls)";
+
+            MatchCollection matches = Regex.Matches(e.Message.Content, pattern, RegexOptions.IgnoreCase);
 
             double chance = new Random().NextDouble();
 
-            if (chance < 0.01)
+            if (matches.Count > 1 && chance < 0.2)
             {
-                await msg.CreateReactionAsync(DiscordEmoji.FromUnicode("🎊"));
+                var msg = await e.Message.RespondAsync("you sure like balls, huh?");
+                if (chance < 0.01)
+                {
+                    await msg.CreateReactionAsync(DiscordEmoji.FromUnicode("🎊"));
+                }
             }
+            else
+            {
+                var msg = await e.Message.RespondAsync("balls");
+                if (chance < 0.01)
+                {
+                    await msg.CreateReactionAsync(DiscordEmoji.FromUnicode("🎊"));
+                }
+            }
+
             return;
         }
+
 
         // i love gd cologne
         if (e.Message.Content.ToLower().Contains("sightread"))
@@ -84,6 +102,7 @@ public class MessageCreationHandler
             await e.Message.RespondAsync(sightreadableEmbed);
             return;
         }
+
 
         // portuguese
         string[] portugese = { "portugal", "portuguese", "🇵🇹" }; // matches every case in array
