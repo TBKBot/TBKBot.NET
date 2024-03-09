@@ -1,15 +1,8 @@
 ﻿using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using TBKBot.Data;
 using TBKBot.Models;
-using TBKBot.Utils;
-using static MongoDB.Bson.Serialization.Serializers.SerializerHelper;
 
 public class ReactionAddHandler
 {
@@ -23,7 +16,7 @@ public class ReactionAddHandler
 
     public async Task OnReactAdd(DiscordClient client, MessageReactionAddEventArgs eventArgs)
     {
-        if (eventArgs.Emoji.GetDiscordName() == ":star2:")
+        if (eventArgs.Emoji.GetDiscordName() == ":star:")
         {
             var starboardChannel = eventArgs.Guild.GetChannel(737683342371061850);
 
@@ -31,9 +24,9 @@ public class ReactionAddHandler
 
             if (starReaction.Count >= 3) // starboard condition for a message
             {
-                var member = (DiscordMember)eventArgs.User;
+                var member = (DiscordMember)eventArgs.Message.Author;
 
-                var DBEngine = new DBEngine("starboard");
+                var DBEngine = new DBEngine("tbkbot");
 
                 var data = await DBEngine.LoadStarMessageAsync(eventArgs.Message.Id);
                 if (data == null)
@@ -44,6 +37,7 @@ public class ReactionAddHandler
                         {
                             Name = (member.Nickname == null) ? member.Username : member.Nickname,
                             IconUrl = (member.GuildAvatarUrl == null) ? member.AvatarUrl : member.GuildAvatarUrl,
+                            Url = eventArgs.Message.JumpLink.ToString()
                         },
                         Description = eventArgs.Message.Content,
                         Color = DiscordColor.Yellow,
@@ -51,7 +45,7 @@ public class ReactionAddHandler
                         Timestamp = DateTime.Now
                     };
 
-                    var boardMessage = await starboardChannel.SendMessageAsync($":star2: **{starReaction.Count}** {eventArgs.Message.JumpLink}", embed);
+                    var boardMessage = await starboardChannel.SendMessageAsync($":star: **{starReaction.Count}** {eventArgs.Message.JumpLink}", embed);
 
                     var starboardData = new StarMessage
                     {

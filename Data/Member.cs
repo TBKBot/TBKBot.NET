@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using MongoDB.Bson.Serialization.Attributes;
-using Newtonsoft.Json;
-using TBKBot.Models;
+﻿using MongoDB.Bson.Serialization.Attributes;
 
 namespace TBKBot.Models
 {

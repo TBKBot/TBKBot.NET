@@ -1,6 +1,4 @@
 ﻿using MongoDB.Driver;
-using System;
-using System.Threading.Tasks;
 using TBKBot.Models;
 
 namespace TBKBot.Data

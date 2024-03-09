@@ -1,15 +1,6 @@
-﻿using Amazon.Runtime.Internal.Endpoints.StandardLibrary;
-using DSharpPlus;
+﻿using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.SlashCommands;
-using SharpCompress.Common;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Net;
-using System.Text;
-using System.Threading.Tasks;
 using TBKBot.Data;
 using TBKBot.Utils;
 

@@ -1,9 +1,7 @@
 ﻿using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
-using LiteDB;
 using System.Text.RegularExpressions;
-using TBKBot;
 using TBKBot.Data;
 using TBKBot.Models;
 
