@@ -3,9 +3,12 @@ using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
 using DSharpPlus.Entities;
 using DSharpPlus.Interactivity.Extensions;
+using MongoDB.Driver.Linq;
+using System.ComponentModel;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using TBKBot.Data;
+using TBKBot.Utils;
 
 namespace TBKBot.commands
 {
@@ -542,6 +545,7 @@ namespace TBKBot.commands
             }
         }
 
+        /*
         [Command("help")]
         public async Task Help(CommandContext ctx, string command = null)
         {
@@ -558,6 +562,7 @@ namespace TBKBot.commands
 
             await ctx.RespondAsync(embed);
         }
+        */
 
         [Command("avatar")]
         public async Task Avatar(CommandContext ctx, DiscordMember member = null)
@@ -739,7 +744,9 @@ namespace TBKBot.commands
 
             var random = new Random();
 
-            var message = await ctx.RespondAsync("Generating...");
+            var loadingEmoji = DiscordEmoji.FromGuildEmote(Program.Client, 1215487770147950634);
+
+            var message = await ctx.RespondAsync($"Generating {loadingEmoji}");
 
             string messageContents = "";
 
@@ -794,10 +801,19 @@ namespace TBKBot.commands
                 {
                     string[] displayNameParts = timeZone.DisplayName.Split(new char[] { '(', ')' }, StringSplitOptions.RemoveEmptyEntries);
 
-                    string region = displayNameParts[1].Trim();
+                    string[] regions = displayNameParts[1].Trim().Split(",");
                     string timeZoneId = displayNameParts[0].Trim();
 
-                    await ctx.RespondAsync($"It's 5 o' clock in: [{region}](<https://www.google.com/search?q={region}>) ({timeZoneId})");
+                    var messages = await ctx.Channel.GetMessagesBeforeAsync(ctx.Message.Id, 100);
+                    if (messages.Any(x => x.Content.Contains("t.fiveoclock")))
+                    {
+                        await ctx.RespondAsync($"It's 5 o' clock in: [{regions[0]}](<https://en.wikipedia.org/wiki/{regions[0].Replace(" ", "_")}>) ({timeZoneId})");
+                    }
+                    else
+                    {
+                        await ctx.RespondAsync($"It's 5 o' clock in: [{regions[0]}](https://en.wikipedia.org/wiki/{regions[0].Replace(" ", "_")}) ({timeZoneId})");
+                    }
+                    
                     break;
                 }
             }
@@ -826,25 +842,6 @@ namespace TBKBot.commands
             {
                 await ctx.RespondAsync(ex.Message);
             }
-        }
-
-        private static string GenerateProgressBar(TimeSpan currentPosition, TimeSpan trackLength)
-        {
-            const int progressBarLength = 20;
-
-            // calculate the ratio of completed time to total time
-            double progressRatio = currentPosition.TotalSeconds / trackLength.TotalSeconds;
-
-            // calculate the number of filled and empty slots in the progress bar
-            int filledSlots = (int)(progressBarLength * progressRatio);
-            int emptySlots = progressBarLength - filledSlots;
-
-            // generate the progress bar string
-            string progressBar = new string('━', filledSlots);
-            progressBar += "⬤";
-            progressBar += new string('─', emptySlots);
-
-            return progressBar;
         }
     }
 }
