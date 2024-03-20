@@ -47,7 +47,7 @@ public class MessageDeletionHandler
             Console.WriteLine($"Thread {Task.CurrentId} running. Containing message {thread_msg.Content}");
 
             // Delay for 60 seconds
-            await Task.Delay(30000);
+            await Task.Delay(60000);
 
             // After the delay, remove the message from the dictionary
             if (thread_msg == snipeableMessages[thread_channel])

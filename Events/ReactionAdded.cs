@@ -20,55 +20,56 @@ public class ReactionAddHandler
         {
             var starboardChannel = eventArgs.Guild.GetChannel(737683342371061850);
 
+            var message = await eventArgs.Channel.GetMessageAsync(eventArgs.Message.Id);
+
             var starReaction = await eventArgs.Message.GetReactionsAsync(eventArgs.Emoji);
 
-            if (starReaction.Count >= 3) // starboard condition for a message
+            if (starReaction.Count < 3)
+                return;
+            
+            var DBEngine = new DBEngine("tbkbot");
+
+            var data = await DBEngine.LoadStarMessageAsync(message.Id);
+            if (data == null)
             {
-                var member = (DiscordMember)eventArgs.Message.Author;
-
-                var DBEngine = new DBEngine("tbkbot");
-
-                var data = await DBEngine.LoadStarMessageAsync(eventArgs.Message.Id);
-                if (data == null)
+                var embed = new DiscordEmbedBuilder
                 {
-                    var embed = new DiscordEmbedBuilder
+                    Author = new DiscordEmbedBuilder.EmbedAuthor
                     {
-                        Author = new DiscordEmbedBuilder.EmbedAuthor
-                        {
-                            Name = (member.Nickname == null) ? member.Username : member.Nickname,
-                            IconUrl = (member.GuildAvatarUrl == null) ? member.AvatarUrl : member.GuildAvatarUrl,
-                            Url = eventArgs.Message.JumpLink.ToString()
-                        },
-                        Description = eventArgs.Message.Content,
-                        Color = DiscordColor.Yellow,
-                        ImageUrl = (eventArgs.Message.Attachments.Count == 0) ? null : eventArgs.Message.Attachments[0].Url,
-                        Timestamp = DateTime.Now
-                    };
+                        Name = message.Author.Username,
+                        IconUrl = message.Author.AvatarUrl,
+                        Url = message.JumpLink.ToString()
+                    },
+                    Description = message.Content,
+                    Color = DiscordColor.Yellow,
+                    ImageUrl = message.Attachments.Count > 0 ? message.Attachments[0].Url : null,
+                    Timestamp = DateTime.Now
+                };
 
-                    var boardMessage = await starboardChannel.SendMessageAsync($":star: **{starReaction.Count}** {eventArgs.Message.JumpLink}", embed);
+                var boardMessage = await starboardChannel.SendMessageAsync($":star: **{starReaction.Count}** {eventArgs.Message.JumpLink}", embed);
 
-                    var starboardData = new StarMessage
-                    {
-                        Id = eventArgs.Message.Id,
-                        Stars = starReaction.Count,
-                        AuthorId = eventArgs.Message.Author.Id,
-                        ChannelId = eventArgs.Message.ChannelId,
-                        Content = eventArgs.Message.Content,
-                        BoardMessageId = boardMessage.Id
-                    };
+                var starboardData = new StarMessage
+                {
+                    Id = message.Id,
+                    Stars = starReaction.Count,
+                    AuthorId = message.WebhookMessage ? null : message.Author.Id,
+                    ChannelId = message.ChannelId,
+                    Content = message.Content,
+                    BoardMessageId = boardMessage.Id
+                };
 
-                    await DBEngine.SaveStarMessageAsync(starboardData);
-                    return;
-                }
-
-                data.Stars = starReaction.Count;
-
-                await DBEngine.SaveStarMessageAsync(data);
-
-                var boardMsg = await starboardChannel.GetMessageAsync(data.BoardMessageId);
-
-                await boardMsg.ModifyAsync($":star2: **{starReaction.Count}** {eventArgs.Message.JumpLink}");
+                await DBEngine.SaveStarMessageAsync(starboardData);
+                return;
             }
+
+            data.Stars = starReaction.Count;
+
+            await DBEngine.SaveStarMessageAsync(data);
+
+            var boardMsg = await starboardChannel.GetMessageAsync(data.BoardMessageId);
+
+            await boardMsg.ModifyAsync($":star2: **{starReaction.Count}** {eventArgs.Message.JumpLink}");
+            
         }
     }
 }
