@@ -1,5 +1,6 @@
 ﻿{
   "Token": "token",
-  "Prefix": "tbk.",
+  "DeepLKey":  "key",
+  "Prefix": "t.",
   "WelcomeLog": 0
 }
