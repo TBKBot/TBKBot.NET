@@ -6,9 +6,17 @@ using DSharpPlus.Interactivity.Extensions;
 using MongoDB.Driver.Linq;
 using System.ComponentModel;
 using System.Globalization;
+using System.Net;
 using System.Text.RegularExpressions;
 using TBKBot.Data;
 using TBKBot.Utils;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.Processing;
+using SharpCompress.Common;
+using static System.Runtime.InteropServices.JavaScript.JSType;
+using System.Text;
 
 namespace TBKBot.commands
 {
@@ -37,7 +45,7 @@ namespace TBKBot.commands
 
             if (ctx.Member.Hierarchy <= member.Hierarchy)
             {
-                await ctx.RespondAsync("RoleHierarchyError: Provided member role level is too high");
+                await ctx.RespondAsync("Provided member role level is too high");
                 return;
             }
 
@@ -53,6 +61,7 @@ namespace TBKBot.commands
             }
         }
 
+        /*
         [Command("guess")]
         public async Task GuessNumber(CommandContext ctx)
         {
@@ -75,6 +84,7 @@ namespace TBKBot.commands
                 await ctx.Channel.SendMessageAsync($"The number was **{randomNumber}**. You guessed wrong.");
             }
         }
+        */
 
         [Command("sayrandom")]
         [Aliases("sayrand", "say")]
@@ -276,272 +286,53 @@ namespace TBKBot.commands
         }
 
         [Command("coin")]
-        public async Task Coin(CommandContext ctx)
+        public async Task Coin(CommandContext ctx, string prompt, int bet = 0)
         {
+            var coinEmoji = await ctx.Guild.GetEmojiAsync(1219476665852231751);
+
+            if (bet < 0)
+            {
+                await ctx.RespondAsync("Invalid bet amount. Please enter a positive value.");
+                return;
+            }
+
+            var db = new DBEngine("tbkbot");
+            var data = await db.LoadMemberAsync(ctx.Member.Id);
+
+            if (bet > data.Money)
+            {
+                await ctx.RespondAsync($"You don't have enough to bet: {data.Money:N0} {coinEmoji}");
+                return;
+            }
+
             var message = await ctx.RespondAsync("Throwing coin...");
 
             Random rnd = new Random();
+            var result = rnd.Next(0, 2) == 0 ? "heads" : "tails";
+            bool guessedCorrectly = prompt.ToLower() == result;
+            int outcome = guessedCorrectly ? bet : -bet;
 
-            var index = rnd.Next(0, 1);
+            data.Money = Math.Max(0, data.Money + outcome);
+            await db.SaveMemberAsync(data);
 
-            if (index == 0)
+            var embed = new DiscordEmbedBuilder()
+                .WithAuthor(ctx.Member.Username, iconUrl: ctx.Member.AvatarUrl)
+                .WithColor(guessedCorrectly && bet > 0 ? DiscordColor.Green : DiscordColor.Red);
+
+            string response = $"The coin landed on {result}. ";
+            if (bet > 0)
             {
-                await message.ModifyAsync("The coin landed on **heads**!");
+                response += guessedCorrectly ? "You guessed correctly!" : "You guessed incorrectly";
+                var embedResponse = $"{(guessedCorrectly ? "+" : "-")}{bet:N0} {coinEmoji} (Wallet: {data.Money:N0} {coinEmoji})";
+
+                embed.WithDescription(embedResponse);
+
+                await message.ModifyAsync(response);
+                await ctx.Channel.SendMessageAsync(embed);
             }
-            else if (index == 1)
+            else
             {
-                await message.ModifyAsync("The coin landed on **tails**!");
-            }
-        }
-
-        /*
-        [Command("play")]
-        [Aliases("p")]
-        public async Task PlayMusic(CommandContext ctx, [Description("Query search term on YouTube")][RemainingText] string query)
-        {
-            var userVC = ctx.Member.VoiceState.Channel;
-            var lavalinkInstance = ctx.Client.GetLavalink();
-
-            //PRE-EXECUTION CHECKS
-            if (ctx.Member.VoiceState == null || userVC == null)
-            {
-                await ctx.RespondAsync("Please enter a voice channel.");
-                return;
-            }
-
-            if (!lavalinkInstance.ConnectedNodes.Any())
-            {
-                await ctx.RespondAsync("Connection is not establihsed: no Lavalink nodes are connected.");
-                return;
-            }
-
-            if (userVC.Type != ChannelType.Voice)
-            {
-                await ctx.RespondAsync("Invalid voice channel. Please enter a valid channel.");
-                return;
-            }
-
-            if (query == null)
-            {
-                await ctx.RespondAsync("Please provide a search query.");
-                return;
-            }
-
-            //Connecting to VC and playing music
-            var node = lavalinkInstance.ConnectedNodes.Values.First();
-            await node.ConnectAsync(userVC);
-
-            var conn = node.GetGuildConnection(ctx.Member.VoiceState.Guild);
-            if (conn == null)
-            {
-                await ctx.RespondAsync("Lavalink failed to connect.");
-                return;
-            }
-
-            var searchQuery = await node.Rest.GetTracksAsync(query);
-            if (searchQuery.LoadResultType == LavalinkLoadResultType.NoMatches || searchQuery.LoadResultType == LavalinkLoadResultType.LoadFailed)
-            {
-                await ctx.RespondAsync($"Failed to find music with query: {query}");
-                return;
-            }
-
-            var musicTrack = searchQuery.Tracks.First();
-
-            await conn.PlayAsync(musicTrack);
-
-            var converter = new Utils.ConvertText();
-
-            string musicDescription = $"Now Playing: [{musicTrack.Title}]({musicTrack.Uri})\nChannel: {musicTrack.Author}\nDuration: {converter.TimeFormat(musicTrack.Length)}";
-            string id = musicTrack.Identifier;
-            var nowPlayingEmbed = new DiscordEmbedBuilder()
-            {
-                Color = Program.EmbedColor,
-                Title = $"Successfully joined {userVC.Name}",
-                Thumbnail = new DiscordEmbedBuilder.EmbedThumbnail
-                {
-                    Url = $"https://img.youtube.com/vi/{id}/hqdefault.jpg"
-                },
-                Description = musicDescription
-            };
-
-            await ctx.RespondAsync(embed: nowPlayingEmbed);
-        }
-
-        [Command("pause")]
-        public async Task PauseMusic(CommandContext ctx)
-        {
-            var lava = ctx.Client.GetLavalink();
-            var node = lava.ConnectedNodes.Values.First();
-            var conn = node.GetGuildConnection(ctx.Member.VoiceState.Guild);
-
-            if (ctx.Member.VoiceState == null || ctx.Member.VoiceState.Channel == null)
-            {
-                await ctx.RespondAsync("You are not in a voice channel.");
-                return;
-            }
-
-            if (conn == null)
-            {
-                await ctx.RespondAsync("Lavalink is not connected.");
-                return;
-            }
-
-            if (conn.CurrentState.CurrentTrack == null)
-            {
-                await ctx.RespondAsync("There are no tracks playing.");
-                return;
-            }
-
-            await conn.PauseAsync();
-        }
-
-        [Command("resume")]
-        public async Task ResumeMusic(CommandContext ctx)
-        {
-            var lava = ctx.Client.GetLavalink();
-            var node = lava.ConnectedNodes.Values.First();
-            var conn = node.GetGuildConnection(ctx.Member.VoiceState.Guild);
-
-            if (ctx.Member.VoiceState == null || ctx.Member.VoiceState.Channel == null)
-            {
-                await ctx.RespondAsync("You are not in a voice channel.");
-                return;
-            }
-
-            if (conn == null)
-            {
-                await ctx.RespondAsync("Lavalink is not connected.");
-                return;
-            }
-
-            if (conn.CurrentState.CurrentTrack == null)
-            {
-                await ctx.RespondAsync("There are no tracks playing.");
-                return;
-            }
-
-            await conn.ResumeAsync();
-        }
-
-        [Command("seek")]
-        public async Task SeekMusic(CommandContext ctx, int seekValue)
-        {
-            var lava = ctx.Client.GetLavalink();
-            var node = lava.ConnectedNodes.Values.First();
-            var conn = node.GetGuildConnection(ctx.Member.VoiceState.Guild);
-
-            if (ctx.Member.VoiceState == null || ctx.Member.VoiceState.Channel == null)
-            {
-                await ctx.RespondAsync("You are not in a voice channel.");
-                return;
-            }
-
-            if (conn == null)
-            {
-                await ctx.RespondAsync("Lavalink is not connected.");
-                return;
-            }
-
-            if (conn.CurrentState.CurrentTrack == null)
-            {
-                await ctx.RespondAsync("There are no tracks playing.");
-                return;
-            }
-
-            var position = TimeSpan.FromSeconds(seekValue);
-
-            await conn.SeekAsync(position);
-
-            await ctx.RespondAsync($"Seeked track to {position}");
-        }
-
-        [Command("nowplaying")]
-        [Aliases("np")]
-        public async Task NowPlaying(CommandContext ctx)
-        {
-            var lava = ctx.Client.GetLavalink();
-            var node = lava.ConnectedNodes.Values.First();
-            var conn = node.GetGuildConnection(ctx.Member.VoiceState.Guild);
-
-            if (ctx.Member.VoiceState == null || ctx.Member.VoiceState.Channel == null)
-            {
-                await ctx.RespondAsync("You are not in a voice channel.");
-                return;
-            }
-
-            if (conn == null)
-            {
-                await ctx.RespondAsync("Lavalink is not connected.");
-                return;
-            }
-
-            if (conn.CurrentState.CurrentTrack == null)
-            {
-                await ctx.RespondAsync("There are no tracks playing.");
-                return;
-            }
-
-            var currentTrack = conn.CurrentState.CurrentTrack;
-            var position = conn.CurrentState.PlaybackPosition;
-            var length = currentTrack.Length;
-
-            string id = conn.CurrentState.CurrentTrack.Identifier;
-
-            var converter = new Utils.ConvertText();
-
-            var nowPlayingEmbed = new DiscordEmbedBuilder()
-            {
-                Title = "Now Playing",
-                Color = Program.EmbedColor,
-                Thumbnail = new DiscordEmbedBuilder.EmbedThumbnail
-                {
-                    Url = $"https://img.youtube.com/vi/{id}/hqdefault.jpg"
-                },
-                Description = $"[{currentTrack.Title}]({currentTrack.Uri}) by {currentTrack.Author}\n{converter.TimeFormat(position)} {GenerateProgressBar(position, length)} {converter.TimeFormat(length)}"
-            };
-
-            await ctx.RespondAsync(nowPlayingEmbed);
-        }
-
-        [Command("leave")]
-        public async Task LeaveVC(CommandContext ctx)
-        {
-            var lava = ctx.Client.GetLavalink();
-            var node = lava.ConnectedNodes.Values.First();
-            var conn = node.GetGuildConnection(ctx.Member.VoiceState.Guild);
-
-            if (ctx.Member.VoiceState == null || ctx.Member.VoiceState.Channel == null)
-            {
-                await ctx.RespondAsync("You are not in a voice channel.");
-                return;
-            }
-
-            if (conn == null)
-            {
-                await ctx.RespondAsync("Lavalink is not connected.");
-                return;
-            }
-
-            if (conn.CurrentState.CurrentTrack == null)
-            {
-                await ctx.RespondAsync("There are no tracks playing.");
-                return;
-            }
-
-            await conn.DisconnectAsync();
-
-            await ctx.RespondAsync("Bot left voice channel.");
-        }
-        */
-
-        [Group("poll")]
-        class Polls
-        {
-            [GroupCommand]
-            [Command("create")]
-            public async Task PollCreate(CommandContext ctx)
-            {
-                await ctx.RespondAsync("Command is in the works.");
+                await message.ModifyAsync(response);
             }
         }
 
@@ -593,8 +384,8 @@ namespace TBKBot.commands
                 member = ctx.Member;
             }
 
-            var DBEngine = new DBEngine("tbkbot");
-            var data = await DBEngine.LoadMemberAsync(member.Id);
+            var db = new DBEngine("tbkbot");
+            var data = await db.LoadMemberAsync(member.Id);
 
             if (data == null)
             {
@@ -602,15 +393,17 @@ namespace TBKBot.commands
                 return;
             }
 
-            await ctx.RespondAsync($"{member.Username}'s balance: ${data.Money.ToString("N0")}");
+            var coinEmoji = await ctx.Guild.GetEmojiAsync(1219476665852231751);
+
+            await ctx.RespondAsync($"Wallet: {data.Money:N0} {coinEmoji}\nBank: {data.Bank:N0} {coinEmoji}");
         }
 
 
         [Command("donate")]
         public async Task DonateToBot(CommandContext ctx, int amount = 0)
         {
-            var DBEngine = new DBEngine("tbkbot");
-            var data = await DBEngine.LoadMemberAsync(ctx.User.Id);
+            var db = new DBEngine("tbkbot");
+            var data = await db.LoadMemberAsync(ctx.User.Id);
 
             if (amount == 0)
             {
@@ -628,40 +421,54 @@ namespace TBKBot.commands
 
             await ctx.RespondAsync($"**{ctx.User.Username}** has donated ${amount.ToString("N0")} to TBKBot. Thank you!");
 
-            await DBEngine.SaveMemberAsync(data);
+            await db.SaveMemberAsync(data);
         }
 
 
 
         [Command("leaderboard")]
         [Aliases("lb")]
-        public async Task MoneyLeaderboard(CommandContext ctx)
+        public async Task MoneyLeaderboard(CommandContext ctx, int page = 1)
         {
-            var DBEngine = new DBEngine("tbkbot");
+            var db = new DBEngine("tbkbot");
+            var members = await db.GetAllMembersAsync();
 
-            var members = await DBEngine.GetAllMembersAsync();
+            var coinEmoji = await ctx.Guild.GetEmojiAsync(1219476665852231751);
 
             var memberDict = new Dictionary<string, int>();
 
             foreach (var member in members)
             {
                 string idString = member.Id.ToString();
-                memberDict.Add(idString, member.Money);
+                memberDict.Add(idString, member.Money + member.Bank);
             }
 
             // Sort the dictionary by value in descending order
             var sortedMembers = memberDict.OrderByDescending(pair => pair.Value);
 
+            // Calculate the total number of pages
+            int maxPages = (int)Math.Ceiling((double)sortedMembers.Count() / 10);
+
+            // Ensure the provided page number is within the valid range
+            page = Math.Max(1, Math.Min(page, maxPages));
+
+            // Skip the appropriate number of members based on the page number
+            var filteredMembers = sortedMembers.Skip((page - 1) * 10);
+
             var embed = new DiscordEmbedBuilder
             {
                 Title = "Money Leaderboard",
-                Color = new DiscordColor("#FFD700") // Set your desired color
+                Color = new DiscordColor("#FFD700"),
+                Footer = new DiscordEmbedBuilder.EmbedFooter
+                {
+                    Text = $"Page: {page}/{maxPages}"
+                }
             };
 
-            int i = 1;
-            foreach (var pair in sortedMembers.Take(10)) // Take only the top 10 members
+            int i = 1 + (page - 1) * 10;
+            foreach (var pair in filteredMembers.Take(10)) // Take only the top 10 members
             {
-                embed.Description += $"{i} - <@{pair.Key}> - ${pair.Value:N0}\n";
+                embed.Description += $"{i} - <@{pair.Key}> - {pair.Value:N0} {coinEmoji}\n";
                 i++;
             }
 
@@ -672,7 +479,7 @@ namespace TBKBot.commands
         [Command("give")]
         public async Task GiveMoney(CommandContext ctx, DiscordMember member, int amount)
         {
-            var DBEngine = new DBEngine("tbkbot");
+            var db = new DBEngine("tbkbot");
 
             bool exchange = true;
 
@@ -681,26 +488,28 @@ namespace TBKBot.commands
                 exchange = false;
             }
 
+            var benefactor = await db.LoadMemberAsync(ctx.Member.Id);
+
             if (exchange)
             {
-                var benefactor = await DBEngine.LoadMemberAsync(ctx.Member.Id);
-
                 if (benefactor.Money < amount)
                 {
-                    amount = benefactor.Money;
+                    return;
                 }
                 benefactor.Money -= amount;
 
-                await DBEngine.SaveMemberAsync(benefactor);
+                await db.SaveMemberAsync(benefactor);
             }
 
-            var beneficiary = await DBEngine.LoadMemberAsync(member.Id);
+            var beneficiary = await db.LoadMemberAsync(member.Id);
 
             beneficiary.Money += amount;
 
-            await DBEngine.SaveMemberAsync(beneficiary);
+            await db.SaveMemberAsync(beneficiary);
 
-            await ctx.RespondAsync($"${amount:N0} has been given to {member.Username}.");
+            var coinEmoji = await ctx.Guild.GetEmojiAsync(1219476665852231751);
+
+            await ctx.RespondAsync($"{amount:N0} {coinEmoji} has been given to {member.Username}. ({benefactor.Money:N0} {coinEmoji})");
         }
 
         [Command("reactpick")]
@@ -746,7 +555,7 @@ namespace TBKBot.commands
 
             var loadingEmoji = DiscordEmoji.FromGuildEmote(Program.Client, 1215487770147950634);
 
-            var message = await ctx.RespondAsync($"Generating {loadingEmoji}");
+            await ctx.Channel.TriggerTypingAsync();
 
             string messageContents = "";
 
@@ -767,11 +576,11 @@ namespace TBKBot.commands
 
             int limit = random.Next(1, 20);
 
-            // Regular expression pattern to match URLs
+            /*
             string pattern = @"(?:https?|ftp):\/\/[\n\S]+";
 
-            // Remove URLs from the concatenated string
             messageContents = Regex.Replace(messageContents, pattern, "");
+            */
 
             // Split the concatenated string into words
             var words = messageContents.Split(new[] { ' ', '\n' }, StringSplitOptions.RemoveEmptyEntries);
@@ -786,7 +595,7 @@ namespace TBKBot.commands
             string result = string.Join(" ", randomWords);
 
             // Send the string as a message
-            await message.ModifyAsync(content: result.ToLower());
+            await ctx.RespondAsync(content: result.ToLower());
         }
 
         [Command("fiveoclock")]
@@ -828,13 +637,13 @@ namespace TBKBot.commands
 
                 dt.ToUniversalTime();
 
-                var DBEngine = new DBEngine("tbkbot");
+                var db = new DBEngine("tbkbot");
 
-                var data = await DBEngine.LoadMemberAsync(ctx.User.Id);
+                var data = await db.LoadMemberAsync(ctx.User.Id);
 
                 data.Birthday = dt;
 
-                await DBEngine.SaveMemberAsync(data);
+                await db.SaveMemberAsync(data);
 
                 await ctx.RespondAsync($"Your birthday has been saved to {dt:MMMM dd}");
             }
@@ -842,6 +651,221 @@ namespace TBKBot.commands
             {
                 await ctx.RespondAsync(ex.Message);
             }
+        }
+
+        [Command("speechbubble")]
+        public async Task SpeechBubble(CommandContext ctx, string url)
+        {
+            if (!url.Contains("https://"))
+            {
+                await ctx.RespondAsync("No URL provided.");
+                return;
+            }
+
+            try
+            {
+                using (HttpClient client = new HttpClient())
+                {
+                    Stream stream = await client.GetStreamAsync(url);
+
+                    Stream pngStream;
+
+                    // Open the file stream
+                    using (FileStream fileStream = File.OpenRead(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Media", "speechbubble.png")))
+                    {
+                        pngStream = new MemoryStream();
+                        await fileStream.CopyToAsync(pngStream);
+                        pngStream.Position = 0; // Reset the position to the beginning
+                    }
+
+                    using (Image image = Image.Load(stream))
+                    using (Image pngImage = Image.Load(pngStream))
+                    {
+                        // Resize the PNG image to fit the full width of the background image
+                        int newWidth = image.Width;
+                        int newHeight = (int)(image.Height / 3);
+                        pngImage.Mutate(ctx => ctx.Resize(newWidth, newHeight));
+
+                        image.Mutate(ctx => ctx
+                            .DrawImage(pngImage, new Point(0, 0), 1f));
+
+                        // Save the resulting image
+                        using (MemoryStream resultStream = new MemoryStream())
+                        {
+                            image.SaveAsJpeg(resultStream); // Save as JPEG
+                            resultStream.Position = 0;
+
+                            // Create a DiscordMessageBuilder
+                            DiscordMessageBuilder messageBuilder = new DiscordMessageBuilder()
+                                .WithContent("Here's the file")
+                                .AddFile("speechbubble.jpg", resultStream); // Change the file name if needed
+
+                            await ctx.RespondAsync(messageBuilder);
+                        }
+                    }
+                }
+            } catch (Exception ex)
+            {
+                await ctx.RespondAsync(ex.Message);
+            }
+        }
+
+        [Command("kill")]
+        public async Task Kill(CommandContext ctx, DiscordMember member)
+        {
+            if (member == ctx.Member)
+            {
+                await ctx.RespondAsync($"**{member.DisplayName}** killed themselves. RIP");
+                return;
+            }
+
+            if (member.IsBot)
+            {
+                string cmd = member.CreationTimestamp.ToUnixTimeSeconds().ToString() + ".cmd.kill";
+
+                byte[] bytes = Encoding.UTF8.GetBytes(cmd);
+
+                string killcode = Convert.ToBase64String(bytes);
+
+                var loadingEmoji = await ctx.Guild.GetEmojiAsync(1215487770147950634);
+
+                var msg = await ctx.RespondAsync($"BOT DETECTED {loadingEmoji}");
+
+                await msg.ModifyAsync($"BOT DETECTED\nINITIATING KILL PROTOCOL {loadingEmoji}");
+
+                await msg.ModifyAsync($"BOT DETECTED\nINITIATING KILL PROTOCOL\nENTER THE KILL-CODE:");
+
+                var interactivity = Program.Client.GetInteractivity();
+
+                var followupMsg = await interactivity.WaitForMessageAsync(message => message.Author == ctx.User && message.ReferencedMessage == msg);
+
+                if (followupMsg.Result == null)
+                {
+                    await msg.RespondAsync("PROCESS TIMED OUT.\nTERMINATING KILL PROCESS.");
+                    return;
+                }
+
+                if (followupMsg.Result.Content == killcode)
+                {
+                    await followupMsg.Result.RespondAsync($"KILL-CODE INJECTED.\nBOT {member.DisplayName} HAS BEEN TERMINATED.");
+                    return;
+                }
+                else
+                {
+                    await followupMsg.Result.RespondAsync("KILL-CODE INVALID.\nTERMINATING KILL PROCESS.");
+                    return;
+                }
+            }
+
+            await ctx.RespondAsync($"**{ctx.Member.DisplayName}** killed **{member.DisplayName}**");
+        }
+
+        [Command("deposit")]
+        [Aliases("dep")]
+        public async Task Deposit(CommandContext ctx, string amount)
+        {
+            var db = new DBEngine("tbkbot");
+
+            var data = await db.LoadMemberAsync(ctx.Member.Id);
+
+            int amountInt;
+
+            if (int.TryParse(amount, out amountInt))
+            {
+                if (amountInt > data.Money)
+                {
+                    return;
+                }
+            }
+            else if (amount == "all")
+            {
+                amountInt = data.Money;
+            }
+            else
+            {
+                return;
+            }
+
+            data.Bank += amountInt;
+            data.Money -= amountInt;
+
+            await db.SaveMemberAsync(data);
+
+            var coinEmoji = await ctx.Guild.GetEmojiAsync(1219476665852231751);
+
+            await ctx.RespondAsync($"{amountInt:N0} {coinEmoji} deposited into the bank. (Wallet: {data.Money:N0} {coinEmoji})");
+        }
+
+        [Command("withdraw")]
+        [Aliases("with")]
+        public async Task Withdraw(CommandContext ctx, int amount)
+        {
+            var db = new DBEngine("tbkbot");
+
+            var data = await db.LoadMemberAsync(ctx.User.Id);
+
+            if (amount > data.Bank)
+            {
+                return;
+            }
+
+            data.Money += amount;
+            data.Bank -= amount;
+
+            await db.SaveMemberAsync(data);
+
+            var coinEmoji = await ctx.Guild.GetEmojiAsync(1219476665852231751);
+
+            await ctx.RespondAsync($"{amount:N0} {coinEmoji} withdrawn from the bank. (Wallet: {data.Money:N0} {coinEmoji})");
+        }
+
+        [Command("steal")]
+        public async Task Steal(CommandContext ctx, DiscordMember member)
+        {
+            if (member == ctx.Member)
+            {
+                return;
+            }
+
+            var db = new DBEngine("tbkbot");
+
+            var thief = await db.LoadMemberAsync(ctx.Member.Id);
+            var victim = await db.LoadMemberAsync(member.Id);
+
+            TimeSpan cooldownTime = TimeSpan.FromHours(1); // Adjust cooldown time as needed
+            var lastStealTime = thief.LastStealTime;
+
+            if (lastStealTime.HasValue && DateTime.UtcNow - lastStealTime.Value < cooldownTime)
+            {
+                var cooldownEnd = DateTime.UtcNow.Add(cooldownTime);
+                var timestamp = new DateTimeOffset(cooldownEnd).ToUnixTimeSeconds();
+                await ctx.RespondAsync($"You are on cooldown for stealing. You can steal again <t:{timestamp}:R>.");
+                return;
+            }
+
+            int randomDivider = new Random().Next(10, 50);
+
+            int amountStolen = (int)(victim.Money / randomDivider);
+
+            amountStolen = amountStolen < 50 ? victim.Money : amountStolen;
+
+            thief.LastStealTime = DateTime.UtcNow;
+
+            if (amountStolen == 0)
+            {
+                await ctx.RespondAsync("You didn't manage to steal anything.");
+                return;
+            }
+
+            thief.Money += amountStolen;
+            victim.Money -= amountStolen;
+
+            await db.SaveMemberAsync(thief);
+            await db.SaveMemberAsync(victim);
+
+            var coinEmoji = await ctx.Guild.GetEmojiAsync(1219476665852231751);
+
+            await ctx.RespondAsync($"Stole {amountStolen:N0} {coinEmoji} from {member.Mention}.");
         }
     }
 }
