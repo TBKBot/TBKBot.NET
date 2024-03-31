@@ -3,7 +3,6 @@ using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
 using System.Text.RegularExpressions;
 using TBKBot.Data;
-using TBKBot.Models;
 
 public class MessageCreationHandler
 {
@@ -60,6 +59,13 @@ public class MessageCreationHandler
         }
 
 
+        if (e.Message.Author.Id == 221283283227377665 && chance < 0.001)
+        {
+            var verification = new Random().Next(100000, 999999);
+
+            await e.Message.RespondAsync($"Your verification code is {verification}.");
+        }
+
         // balls
         if (e.Message.Content.ToLower().Contains("balls"))
         {
@@ -101,21 +107,21 @@ public class MessageCreationHandler
         // i love gd cologne
         if (e.Message.Content.ToLower().Contains("sightread"))
         {
-            var sightreadableEmbed = new DiscordEmbedBuilder
+            var embed = new DiscordEmbedBuilder
             {
                 Description = "⬛\U0001f7e7\U0001f7e7\U0001f7e7\U0001f7e7\U0001f7e7\U0001f7e7⬛⬛\r\n⬛\U0001f7e7⬛⬛⬛⬇️\U0001f7e7⬛⬛\r\n⬛\U0001f7e7⬛⬛⬛⬛\U0001f7e7⬛⬛\r\n⬛⬛➡️⬛⬛⬛\U0001f7e7⬛⬛\r\n\U0001f7e7\U0001f7e7\U0001f7e7\U0001f7e7🔺🔺\U0001f7e7⬛⬛\r\n⬛⬛⬛\U0001f7e7⬛⬛⬛⬛⬛\r\n⬛⬛⬛\U0001f7e7\U0001f7e7\U0001f7e7\U0001f7e7\U0001f7e7\U0001f7e7"
             };
 
-            await e.Message.RespondAsync(sightreadableEmbed);
+            await e.Message.RespondAsync(embed);
         }
 
 
         // portuguese
-        string[] portugese = { "portugal", "portuguese", "🇵🇹" }; // matches every case in array
+        string[] portugese = ["portugal", "portuguese", "🇵🇹"]; // matches every case in array
 
-        foreach (var port in portugese)
+        foreach (var x in portugese)
         {
-            if (e.Message.Content.ToLower().Contains(port))
+            if (e.Message.Content.ToLower().Contains(x))
             {
                 if (chance > 0.01)
                 {
@@ -133,28 +139,17 @@ public class MessageCreationHandler
             await e.Message.RespondAsync("https://cdn.discordapp.com/emojis/1216109488294068314.webp?size=160&quality=lossless");
 
 
-        // increment member data
         if (e.Author.IsBot)
             return;
 
-        var db = new DBEngine("tbkbot");
+        // increment member money
+        var db = new DBEngine();
 
-        var member_data = await db.LoadMemberAsync(e.Message.Author.Id);
+        var data = await db.LoadMemberAsync(e.Message.Author.Id);
 
-        if (member_data == null)
-        {
-            member_data = new GuildMember
-            {
-                Id = e.Message.Author.Id,
-                Username = e.Message.Author.Username,
-                Money = 0,
-                Bank = 0,
-                Birthday = null
-            };
-        }
+        data.Money++;
+        data.Username = e.Message.Author.Username;
 
-        member_data.Money++;
-
-        await db.SaveMemberAsync(member_data);
+        await db.SaveMemberAsync(data);
     }
 }

@@ -12,5 +12,56 @@ namespace TBKBot.Models
         public DateTime? Birthday { get; set; }
         public DateTime? RespawnTime { get; set; }
         public DateTime? LastStealTime { get; set; }
+
+
+        public bool AddMoney(int amount)
+        {
+            if (amount + Money > int.MaxValue)
+            {
+                return false;
+            }
+
+            Money += amount;
+
+            return true;
+        }
+
+        public bool RemoveMoney(int amount)
+        {
+            if (amount > Money)
+            {
+                return false;
+            }
+
+            Money -= amount;
+
+            return true;
+        }
+
+        public bool Deposit(int amount)
+        {
+            if (amount > Money || amount + Bank > int.MaxValue)
+            {
+                return false;
+            }
+
+            Money -= amount;
+            Bank += amount;
+
+            return true;
+        }
+
+        public bool Withdraw(int amount)
+        {
+            if (amount > Bank || amount + Money > int.MaxValue)
+            {
+                return false;
+            }
+
+            Money += amount;
+            Bank -= amount;
+
+            return true;
+        }
     }
 }

@@ -1,12 +1,5 @@
-﻿using DSharpPlus.CommandsNext;
-using DSharpPlus.Entities;
+﻿using DSharpPlus.Entities;
 using DSharpPlus.SlashCommands;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Channels;
-using System.Threading.Tasks;
 using TBKBot.Data;
 
 namespace TBKBot.Utils
@@ -78,7 +71,7 @@ namespace TBKBot.Utils
 
             var logChannel = await Program.Client.GetChannelAsync(logChannelId);
 
-            var DBEngine = new DBEngine("tbkbot");
+            var DBEngine = new DBEngine();
 
             var mimicData = new MimicMessage
             {

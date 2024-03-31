@@ -27,7 +27,7 @@ public class ReactionAddHandler
             if (starReaction.Count < 3)
                 return;
             
-            var DBEngine = new DBEngine("tbkbot");
+            var DBEngine = new DBEngine();
 
             var data = await DBEngine.LoadStarMessageAsync(message.Id);
             if (data == null)
@@ -43,7 +43,7 @@ public class ReactionAddHandler
                     Description = message.Content,
                     Color = DiscordColor.Yellow,
                     ImageUrl = message.Attachments.Count > 0 ? message.Attachments[0].Url : null,
-                    Timestamp = DateTime.Now
+                    Timestamp = message.CreationTimestamp
                 };
 
                 var boardMessage = await starboardChannel.SendMessageAsync($":star: **{starReaction.Count}** {eventArgs.Message.JumpLink}", embed);

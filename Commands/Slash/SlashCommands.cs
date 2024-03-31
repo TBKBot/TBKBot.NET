@@ -74,7 +74,7 @@ namespace TBKBot.Commands.Slash
         {
             await ctx.DeferAsync(ephemeral: true);
 
-            var DBEngine = new DBEngine("tbkbot");
+            var DBEngine = new DBEngine();
 
             var webhook = new DiscordWebhookBuilder();
 

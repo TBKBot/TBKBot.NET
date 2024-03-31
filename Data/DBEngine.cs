@@ -8,10 +8,10 @@ namespace TBKBot.Data
         private readonly IMongoClient Client;
         private readonly IMongoDatabase Database;
 
-        public DBEngine(string databaseName)
+        public DBEngine()
         {
             Client = new MongoClient("mongodb://localhost:27017");
-            Database = Client.GetDatabase(databaseName);
+            Database = Client.GetDatabase("tbkbot");
         }
 
         //member data
@@ -31,6 +31,15 @@ namespace TBKBot.Data
             var col = Database.GetCollection<GuildMember>("members");
 
             var member = await col.Find(x => x.Id == id).SingleOrDefaultAsync();
+
+            member ??= new GuildMember()
+            {
+                Id = id,
+                Username = "",
+                Money = 0,
+                Bank = 0,
+                Birthday = null
+            };
 
             return member;
         }
