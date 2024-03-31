@@ -4,8 +4,11 @@ using DSharpPlus.Entities;
 using DSharpPlus.Interactivity;
 using DSharpPlus.Interactivity.Extensions;
 using DSharpPlus.SlashCommands;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using System.Reflection;
 using TBKBot.commands;
+using TBKBot.Commands;
 using TBKBot.Commands.Slash;
 using TBKBot.Events;
 
@@ -18,6 +21,7 @@ namespace TBKBot
         public static DiscordColor EmbedColor = new DiscordColor(64, 12, 188);
 
         public static MessageDeletionHandler _messageDeletionHandler;
+        public static MessageUpdateHandler _messageUpdateHandler;
 
         static async Task Main(string[] args)
         {
@@ -47,7 +51,7 @@ namespace TBKBot
 
             //Event Handling
             var messageCreationHandler = new MessageCreationHandler(Client);
-            var messageUpdateHandler = new MessageUpdateHandler(Client);
+            _messageUpdateHandler = new MessageUpdateHandler(Client);
             _messageDeletionHandler = new MessageDeletionHandler(Client);
             var memberJoinHandler = new MemberJoinHandler(Client);
             var memberLeaveHandler = new MemberLeaveHandler(Client);
@@ -55,13 +59,18 @@ namespace TBKBot
             var componentInteractHandler = new ComponentInteractionHandler(Client);
 
 
+            var services = new ServiceCollection()
+                .AddSingleton<Random>()
+                .BuildServiceProvider();
+
             //Setting up command configuration
             var commandsConfig = new CommandsNextConfiguration()
             {
                 StringPrefixes = new string[] { jsonReader.Prefix },
                 EnableMentionPrefix = true,
                 EnableDms = true,
-                EnableDefaultHelp = true
+                EnableDefaultHelp = true,
+                Services = services
             };
 
             Commands = Client.UseCommandsNext(commandsConfig);
@@ -69,6 +78,7 @@ namespace TBKBot
 
             //Registering commands
             Commands.RegisterCommands<PrefixCommands>();
+
             slashCommandsConfiguration.RegisterCommands<SlashCommands>();
 
 
