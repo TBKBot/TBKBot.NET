@@ -8,6 +8,7 @@ namespace TBKBot
         public string DeepLKey { get; set; }
         public string Prefix { get; set; }
         public ulong? WelcomeChannel { get; set; }
+        public string MongoUrl { get; set; }
 
         public async Task ReadJSON()
         {
@@ -20,6 +21,7 @@ namespace TBKBot
                 this.DeepLKey = data.DeepLKey;
                 this.Prefix = data.Prefix;
                 this.WelcomeChannel = data.WelcomeChannel;
+                this.MongoUrl = data.MongoUrl;
             }
         }
     }
@@ -30,5 +32,6 @@ namespace TBKBot
         public string DeepLKey { get; set; }
         public string Prefix { get; set; }
         public ulong? WelcomeChannel { get; set; }
+        public string MongoUrl { get; set; }
     }
 }

@@ -1,6 +1,7 @@
 ﻿{
   "Token": "token",
-  "DeepLKey":  "key",
+  "DeepLKey": "key",
   "Prefix": "t.",
-  "WelcomeLog": 0
+  "WelcomeLog": null,
+  "MongoUrl": ""
 }
