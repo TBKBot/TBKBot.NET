@@ -12,6 +12,8 @@ namespace TBKBot.Commands.Slash
 {
     internal class SlashCommands : ApplicationCommandModule
     {
+        public DBEngine DB = Program.DBEngine;
+
         [SlashCommand("ping", "Checks bot latency")]
         public async Task Ping(InteractionContext ctx)
         {
@@ -74,11 +76,9 @@ namespace TBKBot.Commands.Slash
         {
             await ctx.DeferAsync(ephemeral: true);
 
-            var DBEngine = new DBEngine();
-
             var webhook = new DiscordWebhookBuilder();
 
-            var msgData = await DBEngine.FindMimicMessageAsync(ctx.TargetMessage.Id);
+            var msgData = await DB.FindMimicMessageAsync(ctx.TargetMessage.Id);
 
             if (msgData == null)
             {

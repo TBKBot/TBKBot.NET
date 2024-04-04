@@ -19,6 +19,8 @@ namespace TBKBot.commands
     public class PrefixCommands : BaseCommandModule
     {
         public Random Rng { private get; set; }
+        public DiscordClient Client = Program.Client;
+        public DBEngine DB = Program.DBEngine; 
 
         [Command("ping"), Description("Checks bot and API latency")]
         public async Task Ping(CommandContext ctx)
@@ -271,8 +273,7 @@ namespace TBKBot.commands
                 return;
             }
 
-            var db = new DBEngine();
-            var data = await db.LoadMemberAsync(ctx.Member.Id);
+            var data = await DB.LoadMemberAsync(ctx.Member.Id);
 
             if (bet > data.Money)
             {
@@ -287,7 +288,7 @@ namespace TBKBot.commands
             int outcome = guessedCorrectly ? bet : -bet;
 
             data.Money = Math.Max(0, data.Money + outcome);
-            await db.SaveMemberAsync(data);
+            await DB.SaveMemberAsync(data);
 
             var embed = new DiscordEmbedBuilder()
                 .WithAuthor(ctx.Member.Username, iconUrl: ctx.Member.AvatarUrl)
@@ -322,8 +323,7 @@ namespace TBKBot.commands
             {
                 Title = $"{member.Username}",
                 Description = $"**[Avatar URL]({member.AvatarUrl})**",
-                ImageUrl = member.AvatarUrl,
-                Color = Program.EmbedColor
+                ImageUrl = member.AvatarUrl
             };
 
             await ctx.RespondAsync(embed);
@@ -339,8 +339,7 @@ namespace TBKBot.commands
                 member = ctx.Member;
             }
 
-            var db = new DBEngine();
-            var data = await db.LoadMemberAsync(member.Id);
+            var data = await DB.LoadMemberAsync(member.Id);
 
             if (data == null)
             {
@@ -357,8 +356,7 @@ namespace TBKBot.commands
         [Command("donate"), Description("Donate your money towards the development of TBKBot")]
         public async Task DonateToBot(CommandContext ctx, [Description("Donate amount")] int amount = 0)
         {
-            var db = new DBEngine();
-            var data = await db.LoadMemberAsync(ctx.User.Id);
+            var data = await DB.LoadMemberAsync(ctx.User.Id);
 
             if (amount == 0)
             {
@@ -376,7 +374,7 @@ namespace TBKBot.commands
 
             await ctx.RespondAsync($"**{ctx.User.Username}** has donated ${amount.ToString("N0")} to TBKBot. Thank you!");
 
-            await db.SaveMemberAsync(data);
+            await DB.SaveMemberAsync(data);
         }
 
 
@@ -385,8 +383,7 @@ namespace TBKBot.commands
         [Aliases("lb")]
         public async Task MoneyLeaderboard(CommandContext ctx, int page = 1)
         {
-            var db = new DBEngine();
-            var members = await db.GetAllMembersAsync();
+            var members = await DB.GetAllMembersAsync();
 
             var coinEmoji = await ctx.Guild.GetEmojiAsync(1219476665852231751);
 
@@ -434,12 +431,10 @@ namespace TBKBot.commands
         [Command("give"), Description("Give your money to a member")]
         public async Task GiveMoney(CommandContext ctx, DiscordMember member, int amount)
         {
-            var db = new DBEngine();
-
             bool exchange = ctx.Member.Id == 425661467904180224 ? false : true;
 
-            var benefactor = await db.LoadMemberAsync(ctx.Member.Id);
-            var beneficiary = await db.LoadMemberAsync(member.Id);
+            var benefactor = await DB.LoadMemberAsync(ctx.Member.Id);
+            var beneficiary = await DB.LoadMemberAsync(member.Id);
 
             if (benefactor.Money < amount && exchange)
             {
@@ -449,8 +444,8 @@ namespace TBKBot.commands
             benefactor.Money -= exchange ? amount : 0;
             beneficiary.Money += amount;
 
-            await db.SaveMemberAsync(benefactor);
-            await db.SaveMemberAsync(beneficiary);
+            await DB.SaveMemberAsync(benefactor);
+            await DB.SaveMemberAsync(beneficiary);
 
             var coinEmoji = await ctx.Guild.GetEmojiAsync(1219476665852231751);
 
@@ -574,11 +569,11 @@ namespace TBKBot.commands
 
             dt.ToUniversalTime();
 
-            var data = await db.LoadMemberAsync(ctx.User.Id);
+            var data = await DB.LoadMemberAsync(ctx.User.Id);
 
             data.Birthday = dt;
 
-            await db.SaveMemberAsync(data);
+            await DB.SaveMemberAsync(data);
 
             await ctx.RespondAsync($"Your birthday has been saved as {dt:MMMM dd}");
         }
@@ -704,9 +699,7 @@ namespace TBKBot.commands
         [Aliases("dep")]
         public async Task Deposit(CommandContext ctx, [Description("Amount to depsit")] string amount)
         {
-            var db = new DBEngine();
-
-            var data = await db.LoadMemberAsync(ctx.Member.Id);
+            var data = await DB.LoadMemberAsync(ctx.Member.Id);
 
             int amountInt;
 
@@ -729,7 +722,7 @@ namespace TBKBot.commands
             data.Bank += amountInt;
             data.Money -= amountInt;
 
-            await db.SaveMemberAsync(data);
+            await DB.SaveMemberAsync(data);
 
             var coinEmoji = await ctx.Guild.GetEmojiAsync(1219476665852231751);
 
@@ -745,9 +738,7 @@ namespace TBKBot.commands
         [Aliases("with")]
         public async Task Withdraw(CommandContext ctx, [Description("Amount to withdraw")] int amount)
         {
-            var db = new DBEngine();
-
-            var data = await db.LoadMemberAsync(ctx.User.Id);
+            var data = await DB.LoadMemberAsync(ctx.User.Id);
 
             if (amount > data.Bank)
             {
@@ -757,7 +748,7 @@ namespace TBKBot.commands
             data.Money += amount;
             data.Bank -= amount;
 
-            await db.SaveMemberAsync(data);
+            await DB.SaveMemberAsync(data);
 
             var coinEmoji = await ctx.Guild.GetEmojiAsync(1219476665852231751);
 
@@ -777,10 +768,8 @@ namespace TBKBot.commands
                 return;
             }
 
-            var db = new DBEngine();
-
-            var thief = await db.LoadMemberAsync(ctx.Member.Id);
-            var victim = await db.LoadMemberAsync(member.Id);
+            var thief = await DB.LoadMemberAsync(ctx.Member.Id);
+            var victim = await DB.LoadMemberAsync(member.Id);
 
             TimeSpan cooldownTime = TimeSpan.FromHours(1); // Adjust cooldown time as needed
             var lastStealTime = thief.LastStealTime;
@@ -810,8 +799,8 @@ namespace TBKBot.commands
             thief.Money += amountStolen;
             victim.Money -= amountStolen;
 
-            await db.SaveMemberAsync(thief);
-            await db.SaveMemberAsync(victim);
+            await DB.SaveMemberAsync(thief);
+            await DB.SaveMemberAsync(victim);
 
             var coinEmoji = await ctx.Guild.GetEmojiAsync(1219476665852231751);
 
@@ -828,9 +817,7 @@ namespace TBKBot.commands
             [Description("Amount to bet")] int bet, 
             [Description("Roulette space to bet on (number, color)")] string space)
         {
-            var db = new DBEngine();
-
-            var data = await db.LoadMemberAsync(ctx.User.Id);
+            var data = await DB.LoadMemberAsync(ctx.User.Id);
 
             bool success = data.RemoveMoney(bet);
             if (!success)

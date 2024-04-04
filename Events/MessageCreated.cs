@@ -2,11 +2,13 @@
 using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
 using System.Text.RegularExpressions;
+using TBKBot;
 using TBKBot.Data;
 
 public class MessageCreationHandler
 {
     private readonly DiscordClient _client;
+    private DBEngine DB = Program.DBEngine;
 
     public MessageCreationHandler(DiscordClient client)
     {
@@ -143,13 +145,11 @@ public class MessageCreationHandler
             return;
 
         // increment member money
-        var db = new DBEngine();
-
-        var data = await db.LoadMemberAsync(e.Message.Author.Id);
+        var data = await DB.LoadMemberAsync(e.Message.Author.Id);
 
         data.Money++;
         data.Username = e.Message.Author.Username;
 
-        await db.SaveMemberAsync(data);
+        await DB.SaveMemberAsync(data);
     }
 }

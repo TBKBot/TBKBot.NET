@@ -1,15 +1,13 @@
 ﻿using DSharpPlus;
 using DSharpPlus.CommandsNext;
-using DSharpPlus.Entities;
 using DSharpPlus.Interactivity;
 using DSharpPlus.Interactivity.Extensions;
 using DSharpPlus.SlashCommands;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using System.Reflection;
-using TBKBot.commands;
 using TBKBot.Commands;
 using TBKBot.Commands.Slash;
+using TBKBot.Data;
 using TBKBot.Events;
 
 namespace TBKBot
@@ -18,7 +16,7 @@ namespace TBKBot
     {
         public static DiscordClient Client { get; set; }
         private static CommandsNextExtension Commands { get; set; }
-        public static DiscordColor EmbedColor = new DiscordColor(64, 12, 188);
+        public static DBEngine DBEngine { get; set; }
 
         public static MessageDeletionHandler _messageDeletionHandler;
         public static MessageUpdateHandler _messageUpdateHandler;
@@ -42,6 +40,9 @@ namespace TBKBot
 
             //Apply config to discord bot
             Client = new DiscordClient(discordConfig);
+
+            //Initialize global DB instance
+            DBEngine = new(jsonReader.MongoUrl);
 
             //Set default timeout for interactivity commands
             Client.UseInteractivity(new InteractivityConfiguration()

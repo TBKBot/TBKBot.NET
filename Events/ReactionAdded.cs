@@ -1,12 +1,14 @@
 ﻿using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
+using TBKBot;
 using TBKBot.Data;
 using TBKBot.Models;
 
 public class ReactionAddHandler
 {
     private readonly DiscordClient _client;
+    private DBEngine DB = Program.DBEngine;
 
     public ReactionAddHandler(DiscordClient client)
     {
@@ -26,10 +28,8 @@ public class ReactionAddHandler
 
             if (starReaction.Count < 3)
                 return;
-            
-            var DBEngine = new DBEngine();
 
-            var data = await DBEngine.LoadStarMessageAsync(message.Id);
+            var data = await DB.LoadStarMessageAsync(message.Id);
             if (data == null)
             {
                 var embed = new DiscordEmbedBuilder
@@ -58,13 +58,13 @@ public class ReactionAddHandler
                     BoardMessageId = boardMessage.Id
                 };
 
-                await DBEngine.SaveStarMessageAsync(starboardData);
+                await DB.SaveStarMessageAsync(starboardData);
                 return;
             }
 
             data.Stars = starReaction.Count;
 
-            await DBEngine.SaveStarMessageAsync(data);
+            await DB.SaveStarMessageAsync(data);
 
             var boardMsg = await starboardChannel.GetMessageAsync(data.BoardMessageId);
 

@@ -7,11 +7,10 @@ namespace TBKBot.Data
     {
         private readonly IMongoClient Client;
         private readonly IMongoDatabase Database;
-        private readonly JSONReader JsonReader = new();
 
-        public DBEngine()
+        public DBEngine(string conn)
         {
-            Client = new MongoClient(JsonReader.MongoUrl);
+            Client = new MongoClient(conn);
             Database = Client.GetDatabase("tbkbot");
         }
 
